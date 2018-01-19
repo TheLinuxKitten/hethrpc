@@ -2,6 +2,15 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 
+--------------------------------------------------------------------------
+--
+-- Copyright: (c) Javier López Durá
+-- License: BSD3
+--
+-- Maintainer: Javier López Durá <linux.kitten@gmail.com>
+--
+--------------------------------------------------------------------------
+
 module Network.Web3.Extra
   ( guardMining
   , web3_sendTx
