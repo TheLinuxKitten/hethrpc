@@ -1,0 +1,36 @@
+name:                hethrpc
+version:             0.1.0.0
+synopsis:            Web3 JSON-RPC Client
+homepage:            none
+license:             BSD3
+license-file:        LICENSE
+author:              The Linux Kitten
+maintainer:          thelinuxkitten@thelinuxkitten.org
+category:            Network
+build-type:          Simple
+cabal-version:       >=1.10
+
+library
+  exposed-modules:     Network.Web3
+                     , Network.Web3.HexText
+                     , Network.Web3.Types
+                     , Network.Web3.Extra
+  build-depends:       base >=4 && <5
+                     , aeson
+                     , base16-bytestring
+                     , bytestring
+                     , hjsonrpc
+                     , hjsonrpc-http
+                     , lifted-async
+                     , lifted-base
+                     , monad-logger
+                     , monad-control
+                     , text
+                     , transformers
+                     , transformers-base
+                     , unordered-containers
+                     , uuid
+                     , vector
+  hs-source-dirs:      src
+  default-language:    Haskell2010
+
