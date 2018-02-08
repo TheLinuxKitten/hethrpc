@@ -305,7 +305,7 @@ filterUpdate fi = do
     Just (fi',_,flsv) -> do
       fls <- takeMVar flsv
       fls2 <- eth_getFilterChanges fi'
-      let fls' = if null fls2 then fls else fls V.++ (V.fromList fls2)
+      let fls' = if null fls2 then fls else fls V.++ V.fromList fls2
       logDebugN $ T.pack
                 $ "filterUpdate: updating filter id " ++ show fi
       putMVar flsv fls'

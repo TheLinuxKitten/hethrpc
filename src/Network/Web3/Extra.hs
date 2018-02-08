@@ -60,7 +60,7 @@ pollTxr p@(blkNumIni, txh) = do
       mining <- eth_mining
       blkNum <- eth_blockNumber
       if mining
-        then do
+        then
           if blkNum > (blkNumIni + 2)
             then return $ Left "pollTxr: Transaction not included!!!"
             else pollTxr p
