@@ -11,7 +11,10 @@
 --------------------------------------------------------------------------
 
 module Network.Web3.Types
-  ( Int64
+  ( BlockNum(..)
+  , Gas(..)
+  , Nonce(..)
+  , Timestamp(..)
   , Text
   , HexData
   , HexData256
@@ -58,10 +61,11 @@ import Control.Monad (mapM)
 import Data.Aeson.JsonRpc
 import Data.Aeson.JsonUtils
 import Data.Aeson.Types
-import Data.Int
+import qualified Data.HashMap.Lazy as HM
 import Data.Maybe (fromJust,isJust,isNothing)
 import Data.Text (Text)
 import qualified Data.Text as T
+import Data.Word
 import Network.JsonRpcConn
 import Network.Web3.HexText
 
@@ -158,6 +162,10 @@ instance FromResponse RpcTraceLog where
 instance FromResponse RpcEthTraceTx where
   parseResult _ = Just parseJSON
 
+type BlockNum = Word32
+type Gas = Word64
+type Nonce = Word64
+type Timestamp = Word64
 type HexData = HexStr
 type HexData256 = HexData
 type HexQuantity = HexStr
@@ -214,9 +222,9 @@ fromMaybeRpcMaybeObj :: (FromJSON a) => Maybe (RpcMaybeObj a) -> Maybe a
 fromMaybeRpcMaybeObj mmo = mmo >>= fromRpcMaybeObj
 
 data RpcEthSyncing = RpcEthSyncing
-                   { synStartingBlock :: Int64  -- ^ El nº de bloque donde se ha iniciado la importación (se resetea despues que la sincronización lo alcance)
-                   , synCurrentBlock :: Int64   -- ^ El bloque actual
-                   , synHighestBlock :: Int64   -- ^ El último bloque estimado
+                   { synStartingBlock :: BlockNum  -- ^ El nº de bloque donde se ha iniciado la importación (se resetea despues que la sincronización lo alcance)
+                   , synCurrentBlock :: BlockNum   -- ^ El bloque actual
+                   , synHighestBlock :: BlockNum   -- ^ El último bloque estimado
                    } deriving (Show)
 
 instance FromJSON RpcEthSyncing where
@@ -226,13 +234,13 @@ instance FromJSON RpcEthSyncing where
                      <*> (fromHex <$> o .: "highestBlock")
 
 data ParamBlock = PBHex HexHash256      -- ^ Hash del bloque
-                | PBNum Int64           -- ^ Nº de bloque
+                | PBNum BlockNum           -- ^ Nº de bloque
                 | PBEarliest            -- ^ Bloque inicial
                 | PBLatest              -- ^ Último bloque minado
                 | PBPending             -- ^ Bloque de las transacciones/estado pendientes
                 deriving (Show)
 
-data RpcParamBlock = RPBNum Int64            -- ^ Nº de bloque
+data RpcParamBlock = RPBNum BlockNum            -- ^ Nº de bloque
                    | RPBEarliest             -- ^ Bloque inicial
                    | RPBLatest               -- ^ Último bloque minado
                    | RPBPending              -- ^ Bloque de las transacciones/estado pendientes
@@ -263,11 +271,11 @@ toJSONListMaybe = foldl (\r (t,ma) -> t .= fromJust ma:r) []
 data RpcEthTx = RpcEthTx
   { txFrom :: HexEthAddr            -- ^ Dirección del emisor
   , txTo :: Maybe HexEthAddr        -- ^ Dirección del destinatario de la transacción (opcional al crear un nuevo contract)
-  , txGas :: Maybe Int64            -- ^ Gas provisto para la ejecución de la transacción. Devolverá el gas no usado. opcional, por defecto 90000
+  , txGas :: Maybe Gas            -- ^ Gas provisto para la ejecución de la transacción. Devolverá el gas no usado. opcional, por defecto 90000
   , txGasPrice :: Maybe Integer     -- ^ Precio del gas usado en cada pago de gas. Opcional, por defecto 'pendiente de determinar'
   , txValue :: Maybe Integer        -- ^ Valor enviado junto con la transacción. Opcional.
   , txData :: Maybe HexData         -- ^ El código compilado de un contract, o el hash de la firma del método llamado y los parámetros codificados
-  , txNonce :: Maybe Int64          -- ^ Nonce. Permite reemplazar transacciones pendientes que usan el mismo nonce. Opcional
+  , txNonce :: Maybe Nonce          -- ^ Nonce. Permite reemplazar transacciones pendientes que usan el mismo nonce. Opcional
   } deriving (Show)
 
 instance ToJSON RpcEthTx where
@@ -285,7 +293,7 @@ instance ToJSON RpcEthTx where
 data RpcEthMsgCall = RpcEthMsgCall
   { msgFrom :: Maybe HexEthAddr         -- ^ Dirección del emisor
   , msgTo :: Maybe HexEthAddr           -- ^ Dirección del destinatario
-  , msgGas :: Maybe Int64               -- ^ Gas provisto para la ejecución de la transacción
+  , msgGas :: Maybe Gas               -- ^ Gas provisto para la ejecución de la transacción
   , msgGasPrice :: Maybe Integer        -- ^ Precio del gas usado en cada pago de gas
   , msgValue :: Maybe Integer           -- ^ Valor enviado en la transacción
   , msgData :: Maybe HexData            -- ^ Hash de la firma del método y parámetros codificados
@@ -304,15 +312,15 @@ instance ToJSON RpcEthMsgCall where
 
 data RpcEthBlkTx = RpcEthBlkTx
   { btxHash :: HexHash256               -- ^ Hash de la transacción
-  , btxNonce :: Int64                   -- ^ Nº de transacciones hechas por el emisor previas a esta
+  , btxNonce :: Nonce                   -- ^ Nº de transacciones hechas por el emisor previas a esta
   , btxBlockHash :: Maybe HexHash256    -- ^ Hash del bloque que la contiene, a no ser que el bloque este pendiente
-  , btxBlockNumber :: Maybe Int64       -- ^ Nº de bloque que la contiene
+  , btxBlockNumber :: Maybe BlockNum       -- ^ Nº de bloque que la contiene
   , btxTransactionIndex :: Maybe Int    -- ^ Indice de la transacción en el bloque
   , btxFrom :: HexEthAddr               -- ^ Dirección del emisor
   , btxTo :: Maybe HexEthAddr           -- ^ Dirección del receptor
   , btxValue :: Integer                 -- ^ Valor transferido en *wei*s
   , btxGasPrice :: Integer              -- ^ Precio del gas del emisor en *wei*s
-  , btxGas :: Int64                     -- ^ Gas provisto por el emisor
+  , btxGas :: Gas                     -- ^ Gas provisto por el emisor
   , btxInput :: HexData                 -- ^ Datos enviados en la transacción
   , btxV :: Maybe Integer
   , btxR :: Maybe Integer
@@ -346,7 +354,7 @@ isPendingBlock blk = isNothing (rebHash blk) &&
 
 -- | TODO: Usar dos constructores, para bloque existente y pendiente
 data RpcEthBlock = RpcEthBlock
-  { rebNumber :: Maybe Int64            -- ^ Nº de bloque
+  { rebNumber :: Maybe BlockNum            -- ^ Nº de bloque
   , rebHash :: Maybe HexHash256         -- ^ Hash del bloque
   , rebParentHash :: Maybe HexHash256   -- ^ Hash del bloque padre
   , rebNonce :: Maybe HexHash64         -- ^ Hash del POW
@@ -361,9 +369,9 @@ data RpcEthBlock = RpcEthBlock
   , rebTotalDifficulty :: Maybe Integer -- ^ Difficulty total del chain hasta este bloque
   , rebExtraData :: HexData
   , rebSize :: Int                      -- ^ Tamaño del bloque en bytes
-  , rebGasLimit :: Int64                -- ^ Máximo gas permitido en el bloque
-  , rebGasUsed :: Int64                 -- ^ El gas total usado por todas las transacciones del bloque
-  , rebTimestamp :: Int64               -- ^ Fecha de incorporación del bloque
+  , rebGasLimit :: Gas                -- ^ Máximo gas permitido en el bloque
+  , rebGasUsed :: Gas                 -- ^ El gas total usado por todas las transacciones del bloque
+  , rebTimestamp :: Timestamp               -- ^ Fecha de incorporación del bloque
   , rebTransactions :: [RpcParamObject RpcEthBlkTx]     -- ^ Array de transacciones, compuesto de objetos transacción o sus hashes, según parámetro de llamada
   , rebUncles :: [HexHash256]           -- ^ Array de uncle hashes
   } deriving (Show)
@@ -397,7 +405,7 @@ data RpcEthLog = RpcEthLog
                , logTransactionIndex :: Maybe Int
                , logTransactionHash :: Maybe HexHash256
                , logBlockHash :: Maybe HexHash256
-               , logBlockNumber :: Maybe Int64
+               , logBlockNumber :: Maybe BlockNum
                , logAddress :: HexEthAddr
                , logData :: HexData
                , logTopics :: [HexData]
@@ -419,9 +427,9 @@ data RpcEthTxReceipt = RpcEthTxReceipt
                      { txrTransactionHash :: HexHash256     -- ^ Hash de la transacción
                      , txrTransactionIndex :: Int           -- ^ Indice de la transacción en el bloque
                      , txrBlockHash :: HexHash256           -- ^ Hash del bloque donde se encuentra la transacción
-                     , txrBlockNumber :: Int64              -- ^ Nº del bloque
-                     , txrCumulativeGasUsed :: Int64        -- ^ Cantidad total de gas usado cuando se ejecutó la transacción en el bloque
-                     , txrGasUsed :: Int64                  -- ^ La cantidad de gas usado por esta transacción
+                     , txrBlockNumber :: BlockNum              -- ^ Nº del bloque
+                     , txrCumulativeGasUsed :: Gas        -- ^ Cantidad total de gas usado cuando se ejecutó la transacción en el bloque
+                     , txrGasUsed :: Gas                  -- ^ La cantidad de gas usado por esta transacción
                      , txrContractAddress :: Maybe HexEthAddr -- ^ La dirección del contract creado, si es el caso
                      , txrLogs :: [RpcEthLog]               -- ^ Array de objetos log, que ha generado esta transación
                      , txrStatus :: Maybe Bool              -- ^ Just False indica que la transacción ha fallado con el opcode REVERT, y Just True indica que la transacción ha finalizado correctamente (Desde Byzantium)
@@ -446,7 +454,7 @@ data RpcEthStorage = RpcEthStorage
 
 data RpcEthAccount = RpcEthAccount
     { accAddr :: HexEthAddr         -- ^ Dirección de la cuenta
-    , accNonce :: Int64             -- ^ Número de transacciones enviadas
+    , accNonce :: Nonce             -- ^ Número de transacciones enviadas
     , accBalance :: Integer         -- ^ Balance de la cuenta en el estado del bloque
     , accCode :: HexData            -- ^ Código del contrato (si lo es)
     , accCodeHash :: HexHash256
@@ -502,13 +510,13 @@ instance ToJSON RpcTraceOptions where
 data RpcTraceLog = RpcTraceLog
     { traceLogDepth :: Int                  -- ^ Profundidad de ejecución
     , traceLogError :: Maybe Value          -- ^ Si es `Nothing` ignorar el resto de campos
-    , traceLogGas :: Int64                  -- ^ Cantidad de gas restante
-    , traceLogGasCost :: Int64              -- ^ Coste de la operación
-    , traceLogMemory :: [HexData256]        -- ^ Espacio de memoria del contrato
+    , traceLogGas :: Gas                  -- ^ Cantidad de gas restante
+    , traceLogGasCost :: Gas              -- ^ Coste de la operación
+    , traceLogMemory :: Maybe [HexData256]        -- ^ Espacio de memoria del contrato
     , traceLogOp :: Text                    -- ^ OpCode
     , traceLogPc :: Int                     -- ^ Proggram counter
-    , traceLogStack :: [HexData256]         -- ^ Pila de ejecución
-    , traceLogStorage :: [RpcEthStorage]    -- ^ Almacenamiento
+    , traceLogStack :: Maybe [HexData256]         -- ^ Pila de ejecución
+    , traceLogStorage :: Maybe [RpcEthStorage]    -- ^ Almacenamiento
     } deriving (Show)
 
 instance FromJSON RpcTraceLog where
@@ -517,14 +525,21 @@ instance FromJSON RpcTraceLog where
                      <*> (maybe Nothing fromRpcMaybeObj <$> o .:? "error")
                      <*> o .: "gas"
                      <*> o .: "gasCost"
-                     <*> (maybe [] (map joinHex) . fromRpcMaybeObj <$> o .: "memory")
+                     <*> (do
+                            mVal <- o .:? "memory"
+                            case mVal of
+                              Nothing -> return Nothing
+                              Just val -> return $ fmap (map joinHex) $ fromRpcMaybeObj val)
                      <*> o .: "op"
                      <*> o .: "pc"
-                     <*> (map joinHex <$> o .: "stack")
-                     <*> parseListOfKeyObject o "storage" parseJsonStorage
+                     <*> (fmap (map joinHex) <$> o .:? "stack")
+                     <*> (if HM.member "storage" o
+                            then Just <$> parseListOfKeyObject o "storage" parseJsonStorage
+                            else return Nothing)
 
 data RpcEthTraceTx = RpcEthTraceTx
-    { traceTxGas :: Int64
+    { traceTxGas :: Gas
+    , traceTxFailed :: Bool
     , traceTxReturnValue :: HexData
     , traceTxLogs :: [RpcTraceLog]
     } deriving (Show)
@@ -532,6 +547,7 @@ data RpcEthTraceTx = RpcEthTraceTx
 instance FromJSON RpcEthTraceTx where
   parseJSON (Object o) = RpcEthTraceTx
                      <$> o .: "gas"
+                     <*> o .:? "failed" .!= False
                      <*> o .: "returnValue"
                      <*> o .: "structLogs"
 

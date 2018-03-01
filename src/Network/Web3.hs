@@ -476,7 +476,7 @@ eth_accounts = web3SendJsonRpc Web3_eth_accounts
 
 -- | Devuelve el número del bloque más reciente
 eth_blockNumber :: (JsonRpcConn c, MonadLoggerIO m, MonadBaseControl IO m)
-                => Web3T c m Int64
+                => Web3T c m BlockNum
 eth_blockNumber = fromHex <$> web3SendJsonRpc Web3_eth_blockNumber
 
 -- | Devuelve el balance, en __wei__s, de la cuenta de la dirección dada
@@ -606,7 +606,7 @@ defParamEstimateGasContractNew f d = RpcEthMsgCall (Just f) Nothing Nothing Noth
 -- call/transaction.
 eth_estimateGas :: (JsonRpcConn c, MonadLoggerIO m, MonadBaseControl IO m)
                 => RpcEthMsgCall       -- ^ Transaction call
-                -> Web3T c m (Either Text Int64)   -- ^ Cantidad de gas usado
+                -> Web3T c m (Either Text Gas)   -- ^ Cantidad de gas usado
 eth_estimateGas msgCall = either Left (Right . fromHex)
                       <$> web3SendJsonRpc' (Web3_eth_estimateGas msgCall)
 
@@ -746,7 +746,7 @@ eth_getLogs = web3SendJsonRpc . Web3_eth_getLogs
 -- | Recupera el estado de Ethereum correspondiente al bloque y devuelve
 -- una lista de accounts que incluyen storage y code.
 debug_dumpBlock :: (JsonRpcConn c, MonadLoggerIO m, MonadBaseControl IO m)
-                => Int64   -- ^ Bloque
+                => BlockNum   -- ^ Bloque
                 -> Web3T c m RpcEthState
 debug_dumpBlock = web3SendJsonRpc . Web3_debug_dumpBlock . toHex
 

@@ -39,9 +39,9 @@ guardMining f = do
   if mining then f else return (Left "Node is not mining!!!")
 
 sendTx :: (JsonRpcConn c, MonadLoggerIO m, MonadBaseControl IO m)
-       => HexEthAddr -> Maybe HexEthAddr -> Maybe Int64
+       => HexEthAddr -> Maybe HexEthAddr -> Maybe Gas
        -> Maybe Integer -> Maybe Integer -> Maybe HexData
-       -> Web3T c m (Int64, HexHash256)
+       -> Web3T c m (BlockNum, HexHash256)
 sendTx addrFrom mAddrTo mGas mGasPrice mValue mData = do
   let tx = RpcEthTx addrFrom mAddrTo mGas mGasPrice mValue mData Nothing
   txh <- eth_sendTransaction tx
@@ -49,7 +49,7 @@ sendTx addrFrom mAddrTo mGas mGasPrice mValue mData = do
   return (blkNumIni, txh)
 
 pollTxr :: (JsonRpcConn c, MonadLoggerIO m, MonadBaseControl IO m)
-        => (Int64, HexHash256)
+        => (BlockNum, HexHash256)
         -> Web3T c m (Either Text RpcEthTxReceipt)
 pollTxr p@(blkNumIni, txh) = do
   delay <- web3SessionPollDelay
@@ -83,7 +83,7 @@ sendError nom addrFrom mAddrTo mValue mData msgErr =
 web3_sendTx :: (JsonRpcConn c, MonadLoggerIO m, MonadBaseControl IO m)
             => HexEthAddr         -- ^ Dirección del emisor
             -> Maybe HexEthAddr   -- ^ Dirección del destinatario
-            -> Maybe Int64        -- ^ Gas para la ejecución de la transacción
+            -> Maybe Gas          -- ^ Gas para la ejecución de la transacción
             -> Maybe Integer      -- ^ Precio del gas usado
             -> Maybe Integer      -- ^ Valor enviado junto a la transacción
             -> Maybe HexData      -- ^ Datos
@@ -122,7 +122,7 @@ web3_estimateAndSendTxs txds = mapM mySendTx txds
   where
     mySendTx :: (JsonRpcConn c, MonadLoggerIO m, MonadBaseControl IO m)
              => (HexEthAddr, Maybe HexEthAddr, Maybe Integer, Maybe HexData)
-             -> Web3T c m (Either Text (Int64,HexHash256))
+             -> Web3T c m (Either Text (BlockNum,HexHash256))
     mySendTx txd@(f,t,v,d) = guardMining $ do
       egas <- estimateSendTx f t v d
       case egas of
@@ -131,7 +131,7 @@ web3_estimateAndSendTxs txds = mapM mySendTx txds
           !txh <- sendTx f t (Just gas) Nothing v d
           return (Right txh)
     myAsync :: (JsonRpcConn c, MonadLoggerIO m, MonadBaseControl IO m)
-            => Either Text (Int64,HexHash256)
+            => Either Text (BlockNum,HexHash256)
             -> Web3T c m (Either Text (Web3Async c m (Either Text RpcEthTxReceipt)))
     myAsync = either (return . Left) (\a -> Right <$> web3Async (pollTxr a))
     myWait' :: (JsonRpcConn c, MonadLoggerIO m, MonadBaseControl IO m)
