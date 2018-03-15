@@ -53,7 +53,9 @@ module Network.Web3
   , eth_accounts
   , eth_blockNumber
   , eth_getBalance
+  , eth_getBalance'
   , eth_getStorageAt
+  , eth_getStorageAt'
   , eth_getTransactionCount
   , eth_getBlockTransactionCountByHash
   , eth_getBlockTransactionCountByNumber
@@ -106,6 +108,7 @@ module Network.Web3
 
 import Data.Aeson.JsonRpc (JsonRpcVersion(..))
 import Data.Aeson.Types
+import Data.Maybe (fromJust)
 import Data.Text (Text)
 import qualified Data.Text as T
 
@@ -484,8 +487,16 @@ eth_getBalance :: (JsonRpcConn c, MonadLoggerIO m, MonadBaseControl IO m)
                => HexEthAddr    -- ^ Dirección de la cuenta a comprobar
                -> RpcParamBlock -- ^ Bloque (según el estado de ethereum almacenado en ese bloque)
                -> Web3T c m Integer
-eth_getBalance addr blk = fromHex
-                      <$> web3SendJsonRpc (Web3_eth_getBalance addr blk)
+eth_getBalance addr blk = fromJust <$> eth_getBalance' addr blk
+
+-- | Devuelve el balance, en __wei__s, de la cuenta de la dirección dada,
+-- si existe.
+eth_getBalance' :: (JsonRpcConn c, MonadLoggerIO m, MonadBaseControl IO m)
+                => HexEthAddr    -- ^ Dirección de la cuenta a comprobar
+                -> RpcParamBlock -- ^ Bloque (según el estado de ethereum almacenado en ese bloque)
+               -> Web3T c m (Maybe Integer)
+eth_getBalance' addr blk = (\mo -> fromRpcMaybeObj mo >>= Just . fromHex)
+                       <$> web3SendJsonRpc (Web3_eth_getBalance addr blk)
 
 -- | Devuelve el valor de una posición del almacenamiento de una dirección
 -- TODO: Documentar el ejemplo usando esta librería
@@ -494,7 +505,18 @@ eth_getStorageAt :: (JsonRpcConn c, MonadLoggerIO m, MonadBaseControl IO m)
                  -> Integer         -- ^ Posición en el almacenamiento
                  -> RpcParamBlock   -- ^ Bloque (estado) a consultar
                  -> Web3T c m HexData256
-eth_getStorageAt addr num blk = web3SendJsonRpc $ Web3_eth_getStorageAt addr (toHex num) blk
+eth_getStorageAt addr num blk = fromJust <$> eth_getStorageAt' addr num blk
+
+-- | Devuelve el valor de una posición del almacenamiento de una dirección
+-- TODO: Documentar el ejemplo usando esta librería
+eth_getStorageAt' :: (JsonRpcConn c, MonadLoggerIO m, MonadBaseControl IO m)
+                  => HexEthAddr      -- ^ Dirección del almacenamiento
+                  -> Integer         -- ^ Posición en el almacenamiento
+                  -> RpcParamBlock   -- ^ Bloque (estado) a consultar
+                  -> Web3T c m (Maybe HexData256)
+eth_getStorageAt' addr num blk =
+  fromRpcMaybeObj <$> web3SendJsonRpc
+                          (Web3_eth_getStorageAt addr (toHex num) blk)
 
 -- | Devuelve el nº de transacciones enviadas desde una dirección (cuenta)
 eth_getTransactionCount :: (JsonRpcConn c, MonadLoggerIO m, MonadBaseControl IO m)
@@ -559,7 +581,7 @@ eth_getCode :: (JsonRpcConn c, MonadLoggerIO m, MonadBaseControl IO m)
             => HexEthAddr       -- ^ Dirección
             -> RpcParamBlock    -- ^ Bloque
             -> Web3T c m HexData
-eth_getCode addr blk = web3SendJsonRpc $ Web3_eth_getCode addr blk
+eth_getCode addr blk = web3SendJsonRpc (Web3_eth_getCode addr blk)
 
 -- | Obtiene la firma de un mensaje. La dirección debe estar /unlocked/
 eth_sign :: (JsonRpcConn c, MonadLoggerIO m, MonadBaseControl IO m, HexText a)
