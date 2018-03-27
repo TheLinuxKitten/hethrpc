@@ -40,6 +40,7 @@ module Network.Web3.Types
   , RpcEthMsgCall(..)
   , RpcEthBlkTx(..)
   , RpcEthBlock(..)
+  , sortTxs
   , isPendingBlock
   , RpcEthLog(..)
   , RpcEthTxReceipt(..)
@@ -62,7 +63,9 @@ import Data.Aeson.JsonRpc
 import Data.Aeson.JsonUtils
 import Data.Aeson.Types
 import qualified Data.HashMap.Lazy as HM
-import Data.Maybe (fromJust,isJust,isNothing)
+import Data.List (sortBy)
+import Data.Maybe (fromJust,isJust,isNothing,maybe)
+import Data.Ord (comparing)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Word
@@ -398,6 +401,12 @@ instance FromJSON RpcEthBlock where
                      <*> (fromHex <$> o .: "timestamp")
                      <*> o .: "transactions"
                      <*> o .: "uncles"
+
+sortTxs :: [RpcParamObject RpcEthBlkTx] -> [RpcParamObject RpcEthBlkTx]
+sortTxs = sortBy (comparing getTxIdx)
+  where
+    getTxIdx (POHash _) = 0
+    getTxIdx (POObject tx) = maybe 0 id $ btxTransactionIndex tx
 
 data RpcEthLog = RpcEthLog
                { logRemoved :: Maybe Bool
