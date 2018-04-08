@@ -94,6 +94,7 @@ module Network.Web3
   -- ** debug
   , debug_dumpBlock
   , debug_traceTransaction
+  , debug_traceTransactionValue
   -- * Web3 Types
   , module Network.Web3.HexText
   , module Network.Web3.Types
@@ -778,6 +779,13 @@ debug_traceTransaction :: (JsonRpcConn c, MonadLoggerIO m, MonadBaseControl IO m
                        -> RpcTraceOptions   -- ^ Opciones
                        -> Web3T c m RpcEthTraceTx
 debug_traceTransaction h ops = web3SendJsonRpc $ Web3_debug_traceTransaction h ops
+
+-- | Devuelve el trace o ejecución de una transacción
+debug_traceTransactionValue :: (JsonRpcConn c, MonadLoggerIO m, MonadBaseControl IO m)
+                            => HexHash256        -- ^ Hash de la transacción
+                            -> RpcTraceOptions   -- ^ Opciones
+                            -> Web3T c m RpcEthTraceValueTx
+debug_traceTransactionValue h ops = web3SendJsonRpc (Web3_debug_traceTransaction h ops)
 
 {-
 eth_getLogs

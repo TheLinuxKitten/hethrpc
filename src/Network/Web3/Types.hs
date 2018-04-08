@@ -51,6 +51,7 @@ module Network.Web3.Types
   , defaultTraceOptions
   , RpcTraceLog(..)
   , RpcEthTraceTx(..)
+  , RpcEthTraceValueTx(..)
   , RpcEthFilterTopicValue(..)
   , RpcEthFilterTopic(..)
   , RpcEthFilter(..)
@@ -555,6 +556,20 @@ data RpcEthTraceTx = RpcEthTraceTx
 
 instance FromJSON RpcEthTraceTx where
   parseJSON (Object o) = RpcEthTraceTx
+                     <$> o .: "gas"
+                     <*> o .:? "failed" .!= False
+                     <*> o .: "returnValue"
+                     <*> o .: "structLogs"
+
+data RpcEthTraceValueTx = RpcEthTraceValueTx
+    { traceValueTxGas :: Gas
+    , traceValueTxFailed :: Bool
+    , traceValueTxReturnValue :: HexData
+    , traceValueTxLogs :: [Value]
+    } deriving (Show)
+
+instance FromJSON RpcEthTraceValueTx where
+  parseJSON (Object o) = RpcEthTraceValueTx
                      <$> o .: "gas"
                      <*> o .:? "failed" .!= False
                      <*> o .: "returnValue"
