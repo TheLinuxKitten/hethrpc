@@ -31,7 +31,6 @@ library
                      , unordered-containers
                      , uuid
                      , vector
-  ghc-options:         -funbox-strict-fields
   hs-source-dirs:      src
   default-language:    Haskell2010
 
