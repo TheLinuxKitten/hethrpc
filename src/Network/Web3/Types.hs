@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleInstances #-}
 
@@ -70,6 +71,7 @@ import Data.Ord (comparing)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Word
+import GHC.Generics (Generic)
 import Network.JsonRpcConn
 import Network.Web3.HexText
 
@@ -180,7 +182,7 @@ type HexHash512 = HexStr
 type HexHash2048 = HexStr
 type HexEthSign = HexHash512
 
-newtype HexEthAddr = HexEthAddr { getHexAddr :: HexHash160 } deriving (Eq, Ord)
+newtype HexEthAddr = HexEthAddr { getHexAddr :: HexHash160 } deriving (Eq, Generic, Ord)
 
 instance Show HexEthAddr where
   show = T.unpack . getHexAddr
